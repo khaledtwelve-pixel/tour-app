@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,14 +8,15 @@ type TourItem = {
   date: string;
   city: string;
   venue: string;
-  address: string;
+  capacite: string;
   travelType: string;
   departureCity: string;
   arrivalCity: string;
   departureTime: string;
   arrivalTime: string;
-  transport: string;
+  hotel: string;
   hotelSalle: string;
+  transport: string;
   balance: string;
   doors: string;
   showOrder: string;
@@ -22,8 +24,16 @@ type TourItem = {
   productionLocal: string;
 };
 
+type TeamItem = {
+  role: string;
+  name: string;
+  phone: string;
+  email: string;
+};
+
 const SHEET_ID = "1japAvkYshUBq_D55JOwZCvYfqUGM_OJeJ0kx-GIW-Zk";
 const DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=DATA`;
+const TEAM_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=TEAM`;
 
 function parseCSVLine(line: string) {
   const result: string[] = [];
@@ -83,10 +93,17 @@ function parseFrenchDate(dateStr: string) {
   const value = clean(dateStr);
   if (!value) return null;
 
-  const [day, month, year] = value.split("/").map(Number);
-  if (!day || !month || !year) return null;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [day, month, year] = value.split("/").map(Number);
+    return new Date(year, month - 1, day);
+  }
 
-  return new Date(year, month - 1, day);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  return null;
 }
 
 function monthLabelFromDate(dateStr: string) {
@@ -135,14 +152,16 @@ function sortByDate(items: TourItem[]) {
   });
 }
 
-function InfoCard({
+function DetailCard({
   title,
   value,
+  extra,
 }: {
   title: string;
   value?: string;
+  extra?: string;
 }) {
-  if (!value) return null;
+  if (!value && !extra) return null;
 
   return (
     <div
@@ -160,7 +179,8 @@ function InfoCard({
       </div>
 
       <div className="px-5 py-5">
-        <p className="m-0 text-2xl font-bold text-slate-900">{value}</p>
+        {value ? <p className="m-0 text-2xl font-bold text-slate-900">{value}</p> : null}
+        {extra ? <p className="mt-2 text-sm text-slate-600">{extra}</p> : null}
       </div>
     </div>
   );
@@ -168,28 +188,37 @@ function InfoCard({
 
 export default function Page() {
   const [tourData, setTourData] = useState<TourItem[]>([]);
+  const [teamData, setTeamData] = useState<TeamItem[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<TourItem | null>(null);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetch(DATA_URL, { cache: "no-store" });
-        const csv = await res.text();
-        const raw = csvToObjects(csv);
+        const [dataRes, teamRes] = await Promise.all([
+          fetch(DATA_URL, { cache: "no-store" }),
+          fetch(TEAM_URL, { cache: "no-store" }),
+        ]);
 
-        const mapped: TourItem[] = raw.map((row) => ({
+        const dataCsv = await dataRes.text();
+        const teamCsv = await teamRes.text();
+
+        const rawData = csvToObjects(dataCsv);
+        const rawTeam = csvToObjects(teamCsv);
+
+        const mappedData: TourItem[] = rawData.map((row) => ({
           date: row.date || "",
           city: row.city || "",
           venue: row.venue || "",
-          address: row.address || "",
+          capacite: row.Capacite || row.capacite || "",
           travelType: row.travelType || "",
           departureCity: row.departureCity || "",
           arrivalCity: row.arrivalCity || "",
           departureTime: row.departureTime || "",
           arrivalTime: row.arrivalTime || "",
-          transport: row.transport || "",
+          hotel: row.hotel || "",
           hotelSalle: row.hotelSalle || "",
+          transport: row.transport || "",
           balance: row.Balance || row.balance || "",
           doors: row.Doors || row.doors || "",
           showOrder: row.ShowOrder || row.showOrder || "",
@@ -197,14 +226,22 @@ export default function Page() {
           productionLocal: row.ProductionLocal || row.productionLocal || "",
         }));
 
+        const mappedTeam: TeamItem[] = rawTeam.map((row) => ({
+          role: row.role || "",
+          name: row.name || "",
+          phone: row.phone || "",
+          email: row.email || "",
+        }));
+
         const filtered = sortByDate(
-          mapped.filter((item) => {
+          mappedData.filter((item) => {
             const month = monthNumberFromDate(item.date);
             return isFutureOrToday(item.date) && (month === 4 || month === 5);
           })
         );
 
         setTourData(filtered);
+        setTeamData(mappedTeam);
       } catch (error) {
         console.error("Erreur Google Sheets :", error);
       }
@@ -227,6 +264,30 @@ export default function Page() {
       (item) => monthLabelFromDate(item.date) === selectedMonth
     );
   }, [tourData, selectedMonth]);
+
+  const topContacts = useMemo(() => {
+    const wanted = [
+      "Régisseur artiste",
+      "Regisseur artiste",
+      "Régisseur général",
+      "Regisseur général",
+      "Administrateur de tournée",
+      "Administration tournée",
+      "Admin tournée",
+    ];
+
+    return teamData.filter((person) => wanted.includes(person.role));
+  }, [teamData]);
+
+  const mapsQuery = selectedCity
+    ? `${selectedCity.venue} ${selectedCity.city}`
+    : "";
+
+  const mapsLink = mapsQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        mapsQuery
+      )}`
+    : "";
 
   return (
     <main
@@ -264,6 +325,31 @@ export default function Page() {
         {!selectedMonth && !selectedCity && (
           <div className="space-y-4">
             <h2 className="mb-2 text-2xl font-black text-white">Choisis un mois</h2>
+
+            {topContacts.length > 0 && (
+              <div className="mb-6 space-y-3">
+                {topContacts.map((person, i) => (
+                  <div
+                    key={i}
+                    className="rounded-[24px] bg-white px-5 py-4"
+                    style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+                  >
+                    <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-pink-500">
+                      {person.role}
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-slate-900">{person.name}</p>
+                    {person.phone ? (
+                      <a
+                        href={`tel:${person.phone}`}
+                        className="mt-2 block text-sm text-blue-600 underline"
+                      >
+                        {person.phone}
+                      </a>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {months.map((month) => (
               <button
@@ -318,7 +404,6 @@ export default function Page() {
                   <p className="m-0 text-xl font-bold text-slate-900">
                     {item.venue}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">{item.address}</p>
                 </div>
               </button>
             ))}
@@ -335,53 +420,73 @@ export default function Page() {
               ← Retour aux villes
             </button>
 
+            <DetailCard
+              title="Date / Ville"
+              value={selectedCity.city}
+              extra={selectedCity.date}
+            />
+
             <div
               className="overflow-hidden rounded-[24px] bg-white"
               style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
             >
               <div
-                className="px-5 py-5"
+                className="px-5 py-4"
                 style={{
                   background:
-                    "linear-gradient(90deg, #ec4899 0%, #f472b6 35%, #60a5fa 100%)",
+                    "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
                 }}
               >
-                <p className="m-0 text-sm font-extrabold uppercase text-white">
-                  {selectedCity.date}
+                <p className="m-0 text-2xl font-black uppercase text-white">
+                  Salle
                 </p>
-                <h2 className="mt-2 text-4xl font-black uppercase text-white">
-                  {selectedCity.city}
-                </h2>
-                <p className="mt-2 text-lg font-bold text-white">
+              </div>
+
+              <div className="px-5 py-5">
+                <p className="m-0 text-2xl font-bold text-slate-900">
                   {selectedCity.venue}
                 </p>
+                {selectedCity.capacite ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Capacité : {selectedCity.capacite}
+                  </p>
+                ) : null}
+
+                {mapsLink ? (
+                  <a
+                    href={mapsLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-block rounded-full bg-pink-500 px-4 py-2 text-sm font-bold text-white"
+                  >
+                    Ouvrir dans Maps
+                  </a>
+                ) : null}
               </div>
             </div>
 
-            <InfoCard title="Salle" value={selectedCity.address} />
-            <InfoCard
-              title="Voyage"
-              value={
-                selectedCity.departureCity || selectedCity.arrivalCity
-                  ? `${selectedCity.departureCity} → ${selectedCity.arrivalCity}`
-                  : ""
-              }
-            />
-            <InfoCard
-              title="Horaires voyage"
+            <DetailCard title="Voyage" value={selectedCity.travelType} />
+            <DetailCard
+              title="Horaires de voyage"
               value={
                 selectedCity.departureTime || selectedCity.arrivalTime
                   ? `${selectedCity.departureTime} → ${selectedCity.arrivalTime}`
                   : ""
               }
+              extra={
+                selectedCity.departureCity || selectedCity.arrivalCity
+                  ? `${selectedCity.departureCity} → ${selectedCity.arrivalCity}`
+                  : ""
+              }
             />
-            <InfoCard title="Transport" value={selectedCity.transport} />
-            <InfoCard title="Hôtel / Salle" value={selectedCity.hotelSalle} />
-            <InfoCard title="Balances" value={selectedCity.balance} />
-            <InfoCard title="Ouverture des portes" value={selectedCity.doors} />
-            <InfoCard title="Première partie / Show" value={selectedCity.showOrder} />
-            <InfoCard title="Restauration" value={selectedCity.restauration} />
-            <InfoCard title="Production locale" value={selectedCity.productionLocal} />
+            <DetailCard title="Hôtel" value={selectedCity.hotel} />
+            <DetailCard title="Hôtel / Salle" value={selectedCity.hotelSalle} />
+            <DetailCard title="Transport" value={selectedCity.transport} />
+            <DetailCard title="Balances" value={selectedCity.balance} />
+            <DetailCard title="Ouverture des portes" value={selectedCity.doors} />
+            <DetailCard title="Début du show" value={selectedCity.showOrder} />
+            <DetailCard title="Restauration" value={selectedCity.restauration} />
+            <DetailCard title="Production locale" value={selectedCity.productionLocal} />
           </div>
         )}
       </div>
