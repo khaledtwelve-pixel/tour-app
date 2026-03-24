@@ -1,7 +1,8 @@
 async function getData() {
   const res = await fetch(
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTON_ID_ICI/export?format=csv"
-  );
+  "https://docs.google.com/spreadsheets/d/1Gw5lRqEonLr_8OAYSC3QLtNSMhyDF2X3mW0g_ZDXl64/gviz/tq?tqx=out:csv&sheet=DATA",
+  { cache: "no-store" }
+);
   const text = await res.text();
 
   const rows = text.split("\n").slice(1);
