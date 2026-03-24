@@ -1,27 +1,3 @@
-
-async function getData() {
-  const res = await fetch(
-    "https://docs.google.com/spreadsheets/d/1Gw5lRqEonLr_8OAYSC3QLtNSMhyDF2X3mW0g_ZDXl64/export?format=csv&gid=0",
-    { cache: "no-store" }
-  );
-
-  const text = await res.text();
-  const rows = text.split("\n").slice(1).filter(Boolean);
-
-  const clean = (str: string) => (str || "").replace(/"/g, "").trim();
-
-  return rows.map((row) => {
-    const cols = row.split(",");
-
-    return {
-      date: clean(cols[0]),
-      city: clean(cols[1]),
-      venue: clean(cols[2]),
-      address: clean(cols[3]),
-    };
-  });
-}
-
 export default async function Page() {
   const data = await getData();
 
