@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -35,6 +34,19 @@ function parseCSV(csv: string) {
   });
 }
 
+function getMonth(date: string) {
+  if (!date) return "";
+  const parts = date.split("/");
+  if (parts.length !== 3) return "";
+
+  const month = parseInt(parts[1]);
+
+  if (month === 4) return "AVRIL";
+  if (month === 5) return "MAI";
+
+  return "";
+}
+
 export default function Page() {
   const [tourData, setTourData] = useState<TourItem[]>([]);
   const [teamData, setTeamData] = useState<TeamItem[]>([]);
@@ -57,8 +69,6 @@ export default function Page() {
     load();
   }, []);
 
-  const months = ["AVRIL", "MAI"];
-
   const topContacts = useMemo(() => {
     return teamData.filter((p) =>
       [
@@ -68,6 +78,11 @@ export default function Page() {
       ].includes(p.role)
     );
   }, [teamData]);
+
+  const cities = useMemo(() => {
+    if (!selectedMonth) return [];
+    return tourData.filter((item) => getMonth(item.date) === selectedMonth);
+  }, [tourData, selectedMonth]);
 
   return (
     <main
@@ -81,27 +96,21 @@ export default function Page() {
 
         {/* HEADER */}
         <div className="mb-8 pt-4 text-white">
-          <p
-            className="mb-2 font-black uppercase"
-            style={{ color: "#ff5ca8", fontSize: "28px" }}
-          >
+          <p className="mb-2 font-black uppercase" style={{ color: "#ff5ca8" }}>
             PAUL MIRABEL
           </p>
 
-          <h1
-            className="m-0 font-black italic"
-            style={{ fontSize: "80px" }}
-          >
+          <h1 className="m-0 font-black italic" style={{ fontSize: "80px" }}>
             par amour
           </h1>
         </div>
 
-        {/* PAGE ACCUEIL */}
+        {/* ACCUEIL */}
         {!selectedMonth && (
           <div className="space-y-4">
 
             {/* MOIS */}
-            {months.map((month) => (
+            {["AVRIL", "MAI"].map((month) => (
               <button
                 key={month}
                 onClick={() => setSelectedMonth(month)}
@@ -114,8 +123,78 @@ export default function Page() {
               </button>
             ))}
 
-            {/* CONTACTS */}
-            {topContacts.length > 0 && (
-              <div className="mt-6 space-y-3">
-                {topContacts.map((person, i) => (
-                  <
+            {/* TEAM */}
+            <div className="mt-6 space-y-3">
+              {topContacts.map((person, i) => (
+                <div
+                  key={i}
+                  className="rounded-[24px] bg-white px-5 py-4"
+                  style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+                >
+                  <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-pink-500">
+                    {person.role}
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-slate-900">
+                    {person.name}
+                  </p>
+
+                  <a
+                    href={`tel:${person.phone}`}
+                    className="mt-2 block text-sm text-blue-600 underline"
+                  >
+                    {person.phone}
+                  </a>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        )}
+
+        {/* VILLES */}
+        {selectedMonth && (
+          <div className="space-y-4">
+
+            <button
+              onClick={() => setSelectedMonth(null)}
+              className="rounded-full bg-white px-4 py-2 font-bold"
+              style={{ color: "#ec4899" }}
+            >
+              ← Retour
+            </button>
+
+            {cities.map((item, i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-[24px] bg-white"
+                style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+              >
+                <div
+                  className="px-5 py-4"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #ec4899 0%, #f472b6 35%, #60a5fa 100%)",
+                  }}
+                >
+                  <p className="text-white text-sm font-bold">{item.date}</p>
+                  <h2 className="text-white text-3xl font-black">
+                    {item.city}
+                  </h2>
+                </div>
+
+                <div className="px-5 py-5">
+                  <p className="text-xl font-bold text-slate-900">
+                    {item.venue}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+          </div>
+        )}
+
+      </div>
+    </main>
+  );
+}
