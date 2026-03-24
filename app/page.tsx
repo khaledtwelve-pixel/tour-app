@@ -85,6 +85,7 @@ function getMonth(date: string) {
   const parts = date.split("/");
   if (parts.length !== 3) return "";
   const month = parseInt(parts[1], 10);
+
   if (month === 4) return "AVRIL";
   if (month === 5) return "MAI";
   return "";
@@ -103,21 +104,21 @@ function DetailCard({
 
   return (
     <div
-      className="overflow-hidden rounded-[24px] bg-white"
-      style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+      className="overflow-hidden rounded-[20px] bg-white"
+      style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
     >
       <div
-        className="px-5 py-4"
+        className="px-4 py-3"
         style={{
           background:
             "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
         }}
       >
-        <p className="m-0 text-2xl font-black uppercase text-white">{title}</p>
+        <p className="m-0 text-lg font-black uppercase text-white">{title}</p>
       </div>
 
-      <div className="px-5 py-5">
-        {value ? <p className="m-0 text-2xl font-bold text-slate-900">{value}</p> : null}
+      <div className="px-4 py-4">
+        {value ? <p className="m-0 text-xl font-bold text-slate-900">{value}</p> : null}
         {extra ? <p className="mt-2 text-sm text-slate-600">{extra}</p> : null}
       </div>
     </div>
@@ -195,57 +196,60 @@ export default function Page() {
 
   return (
     <main
-      className="min-h-screen p-5"
+      className="min-h-screen p-4"
       style={{
         background:
           "linear-gradient(180deg, #1499f5 0%, #45bcff 40%, #8ee2ff 72%, #c7f3ff 100%)",
       }}
     >
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-8 pt-4 text-white">
-          <p className="mb-2 font-black uppercase" style={{ color: "#ff5ca8" }}>
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-6 pt-3 text-white">
+          <p className="mb-1 text-xl font-black uppercase" style={{ color: "#ff5ca8" }}>
             PAUL MIRABEL
           </p>
 
-          <h1 className="m-0 font-black italic" style={{ fontSize: "80px", lineHeight: 0.9 }}>
+          <h1
+            className="m-0 font-black italic"
+            style={{ fontSize: "56px", lineHeight: 0.9 }}
+          >
             par amour
           </h1>
         </div>
 
         {!selectedMonth && !selectedCity && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {["AVRIL", "MAI"].map((month) => (
               <button
                 key={month}
                 onClick={() => setSelectedMonth(month)}
-                className="block w-full rounded-[24px] bg-white px-6 py-6 text-left"
-                style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+                className="block w-full rounded-[18px] bg-white px-5 py-4 text-left"
+                style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
               >
-                <span className="text-3xl font-black uppercase text-slate-900">
+                <span className="text-2xl font-black uppercase text-slate-900">
                   {month}
                 </span>
               </button>
             ))}
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-4 space-y-2">
               {topContacts.map((person, i) => (
                 <div
                   key={i}
-                  className="rounded-[24px] bg-white px-5 py-4"
-                  style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+                  className="rounded-[18px] bg-white px-4 py-3"
+                  style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
                 >
-                  <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-pink-500">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-pink-500">
                     {person.role}
                   </p>
 
-                  <p className="mt-1 text-xl font-bold text-slate-900">
+                  <p className="mt-1 text-lg font-bold text-slate-900">
                     {person.name}
                   </p>
 
                   {person.phone ? (
                     <a
                       href={`tel:${person.phone}`}
-                      className="mt-2 block text-sm text-blue-600 underline"
+                      className="mt-1 block text-sm text-blue-600 underline"
                     >
                       {person.phone}
                     </a>
@@ -257,10 +261,10 @@ export default function Page() {
         )}
 
         {selectedMonth && !selectedCity && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <button
               onClick={() => setSelectedMonth(null)}
-              className="rounded-full bg-white px-4 py-2 font-bold"
+              className="rounded-full bg-white px-4 py-2 text-sm font-bold"
               style={{ color: "#ec4899" }}
             >
               ← Retour
@@ -270,22 +274,24 @@ export default function Page() {
               <button
                 key={i}
                 onClick={() => setSelectedCity(item)}
-                className="block w-full overflow-hidden rounded-[24px] bg-white text-left"
-                style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+                className="block w-full overflow-hidden rounded-[18px] bg-white text-left"
+                style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
               >
                 <div
-                  className="px-5 py-4"
+                  className="px-4 py-3"
                   style={{
                     background:
                       "linear-gradient(90deg, #ec4899 0%, #f472b6 35%, #60a5fa 100%)",
                   }}
                 >
-                  <p className="text-sm font-bold text-white">{item.date}</p>
-                  <h2 className="text-3xl font-black text-white">{item.city}</h2>
+                  <p className="text-xs font-bold text-white">{item.date}</p>
+                  <h2 className="text-2xl font-black text-white">{item.city}</h2>
                 </div>
 
-                <div className="px-5 py-5">
-                  <p className="text-xl font-bold text-slate-900">{item.venue}</p>
+                <div className="px-4 py-3">
+                  <p className="truncate text-base font-bold text-slate-900">
+                    {item.venue}
+                  </p>
                 </div>
               </button>
             ))}
@@ -293,10 +299,10 @@ export default function Page() {
         )}
 
         {selectedCity && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <button
               onClick={() => setSelectedCity(null)}
-              className="rounded-full bg-white px-4 py-2 font-bold"
+              className="rounded-full bg-white px-4 py-2 text-sm font-bold"
               style={{ color: "#ec4899" }}
             >
               ← Retour aux villes
@@ -309,21 +315,21 @@ export default function Page() {
             />
 
             <div
-              className="overflow-hidden rounded-[24px] bg-white"
-              style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+              className="overflow-hidden rounded-[20px] bg-white"
+              style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
             >
               <div
-                className="px-5 py-4"
+                className="px-4 py-3"
                 style={{
                   background:
                     "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
                 }}
               >
-                <p className="m-0 text-2xl font-black uppercase text-white">Salle</p>
+                <p className="m-0 text-lg font-black uppercase text-white">Salle</p>
               </div>
 
-              <div className="px-5 py-5">
-                <p className="m-0 text-2xl font-bold text-slate-900">
+              <div className="px-4 py-4">
+                <p className="m-0 text-xl font-bold text-slate-900">
                   {selectedCity.venue}
                 </p>
                 {selectedCity.capacite ? (
@@ -336,7 +342,7 @@ export default function Page() {
                     href={mapsLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-4 inline-block rounded-full bg-pink-500 px-4 py-2 text-sm font-bold text-white"
+                    className="mt-3 inline-block rounded-full bg-pink-500 px-4 py-2 text-sm font-bold text-white"
                   >
                     Ouvrir dans Maps
                   </a>
