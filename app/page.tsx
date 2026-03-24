@@ -38,6 +38,7 @@ function parseCSV(csv: string) {
 export default function Page() {
   const [tourData, setTourData] = useState<TourItem[]>([]);
   const [teamData, setTeamData] = useState<TeamItem[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -95,55 +96,26 @@ export default function Page() {
           </h1>
         </div>
 
-        <div className="space-y-4">
+        {/* PAGE ACCUEIL */}
+        {!selectedMonth && (
+          <div className="space-y-4">
 
-          {/* MOIS */}
-          {months.map((month) => (
-            <div
-              key={month}
-              className="rounded-[24px] bg-white px-6 py-6"
-              style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
-            >
-              <span className="text-3xl font-black uppercase text-slate-900">
-                {month}
-              </span>
-            </div>
-          ))}
+            {/* MOIS */}
+            {months.map((month) => (
+              <button
+                key={month}
+                onClick={() => setSelectedMonth(month)}
+                className="block w-full rounded-[24px] bg-white px-6 py-6 text-left"
+                style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+              >
+                <span className="text-3xl font-black uppercase text-slate-900">
+                  {month}
+                </span>
+              </button>
+            ))}
 
-          {/* TEAM EN DESSOUS */}
-          {topContacts.length > 0 && (
-            <div className="mt-6 space-y-3">
-              {topContacts.map((person, i) => (
-                <div
-                  key={i}
-                  className="rounded-[24px] bg-white px-5 py-4"
-                  style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
-                >
-                  <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-pink-500">
-                    {person.role}
-                  </p>
-
-                  <p className="mt-1 text-xl font-bold text-slate-900">
-                    {person.name}
-                  </p>
-
-                  <a
-                    href={`tel:${person.phone}`}
-                    className="mt-2 block text-sm text-blue-600 underline"
-                  >
-                    {person.phone}
-                  </a>
-                </div>
-              ))}
-            </div>
-          )}
-
-        </div>
-      </div>
-    </main>
-  );
-}
-
-git add .
-git commit -m "move team under months clean"
-git push
+            {/* CONTACTS */}
+            {topContacts.length > 0 && (
+              <div className="mt-6 space-y-3">
+                {topContacts.map((person, i) => (
+                  <
