@@ -6,6 +6,20 @@ type TourItem = {
   date: string;
   city: string;
   venue: string;
+  capacite?: string;
+  travelType?: string;
+  departureCity?: string;
+  arrivalCity?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  hotel?: string;
+  hotelSalle?: string;
+  transport?: string;
+  balance?: string;
+  doors?: string;
+  showOrder?: string;
+  restauration?: string;
+  productionLocal?: string;
 };
 
 type TeamItem = {
@@ -18,18 +32,50 @@ const SHEET_ID = "1japAvkYshUBq_D55JOwZCvYfqUGM_OJeJ0kx-GIW-Zk";
 const DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=DATA`;
 const TEAM_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=TEAM`;
 
-function clean(str: string) {
-  return (str || "").replace(/"/g, "").trim();
+function parseCSVLine(line: string) {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result.map((v) => v.replace(/"/g, "").trim());
 }
 
 function parseCSV(csv: string) {
-  const lines = csv.split("\n").filter(Boolean);
-  const headers = lines[0].split(",").map(clean);
+  const lines = csv
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
+  const headers = parseCSVLine(lines[0]);
 
   return lines.slice(1).map((line) => {
-    const values = line.split(",").map(clean);
-    const obj: any = {};
-    headers.forEach((h, i) => (obj[h] = values[i]));
+    const values = parseCSVLine(line);
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      obj[h] = values[i] || "";
+    });
     return obj;
   });
 }
@@ -38,32 +84,90 @@ function getMonth(date: string) {
   if (!date) return "";
   const parts = date.split("/");
   if (parts.length !== 3) return "";
-
-  const month = parseInt(parts[1]);
-
+  const month = parseInt(parts[1], 10);
   if (month === 4) return "AVRIL";
   if (month === 5) return "MAI";
-
   return "";
+}
+
+function DetailCard({
+  title,
+  value,
+  extra,
+}: {
+  title: string;
+  value?: string;
+  extra?: string;
+}) {
+  if (!value && !extra) return null;
+
+  return (
+    <div
+      className="overflow-hidden rounded-[24px] bg-white"
+      style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+    >
+      <div
+        className="px-5 py-4"
+        style={{
+          background:
+            "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
+        }}
+      >
+        <p className="m-0 text-2xl font-black uppercase text-white">{title}</p>
+      </div>
+
+      <div className="px-5 py-5">
+        {value ? <p className="m-0 text-2xl font-bold text-slate-900">{value}</p> : null}
+        {extra ? <p className="mt-2 text-sm text-slate-600">{extra}</p> : null}
+      </div>
+    </div>
+  );
 }
 
 export default function Page() {
   const [tourData, setTourData] = useState<TourItem[]>([]);
   const [teamData, setTeamData] = useState<TeamItem[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<TourItem | null>(null);
 
   useEffect(() => {
     async function load() {
       const [dataRes, teamRes] = await Promise.all([
-        fetch(DATA_URL),
-        fetch(TEAM_URL),
+        fetch(DATA_URL, { cache: "no-store" }),
+        fetch(TEAM_URL, { cache: "no-store" }),
       ]);
 
       const data = parseCSV(await dataRes.text());
       const team = parseCSV(await teamRes.text());
 
-      setTourData(data);
-      setTeamData(team);
+      const mappedTour: TourItem[] = data.map((row: Record<string, string>) => ({
+        date: row.date || "",
+        city: row.city || "",
+        venue: row.venue || "",
+        capacite: row.Capacite || row.capacite || "",
+        travelType: row.travelType || "",
+        departureCity: row.departureCity || "",
+        arrivalCity: row.arrivalCity || "",
+        departureTime: row.departureTime || "",
+        arrivalTime: row.arrivalTime || "",
+        hotel: row.hotel || "",
+        hotelSalle: row.hotelSalle || "",
+        transport: row.transport || "",
+        balance: row.Balance || row.balance || "",
+        doors: row.Doors || row.doors || "",
+        showOrder: row.ShowOrder || row.showOrder || "",
+        restauration: row.Restauration || row.restauration || "",
+        productionLocal: row.ProductionLocal || row.productionLocal || "",
+      }));
+
+      const mappedTeam: TeamItem[] = team.map((row: Record<string, string>) => ({
+        role: row.role || "",
+        name: row.name || "",
+        phone: row.phone || "",
+      }));
+
+      setTourData(mappedTour);
+      setTeamData(mappedTeam);
     }
 
     load();
@@ -84,6 +188,11 @@ export default function Page() {
     return tourData.filter((item) => getMonth(item.date) === selectedMonth);
   }, [tourData, selectedMonth]);
 
+  const mapsQuery = selectedCity ? `${selectedCity.venue} ${selectedCity.city}` : "";
+  const mapsLink = mapsQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
+    : "";
+
   return (
     <main
       className="min-h-screen p-5"
@@ -93,23 +202,18 @@ export default function Page() {
       }}
     >
       <div className="mx-auto max-w-3xl">
-
-        {/* HEADER */}
         <div className="mb-8 pt-4 text-white">
           <p className="mb-2 font-black uppercase" style={{ color: "#ff5ca8" }}>
             PAUL MIRABEL
           </p>
 
-          <h1 className="m-0 font-black italic" style={{ fontSize: "80px" }}>
+          <h1 className="m-0 font-black italic" style={{ fontSize: "80px", lineHeight: 0.9 }}>
             par amour
           </h1>
         </div>
 
-        {/* ACCUEIL */}
-        {!selectedMonth && (
+        {!selectedMonth && !selectedCity && (
           <div className="space-y-4">
-
-            {/* MOIS */}
             {["AVRIL", "MAI"].map((month) => (
               <button
                 key={month}
@@ -123,7 +227,6 @@ export default function Page() {
               </button>
             ))}
 
-            {/* TEAM */}
             <div className="mt-6 space-y-3">
               {topContacts.map((person, i) => (
                 <div
@@ -139,23 +242,22 @@ export default function Page() {
                     {person.name}
                   </p>
 
-                  <a
-                    href={`tel:${person.phone}`}
-                    className="mt-2 block text-sm text-blue-600 underline"
-                  >
-                    {person.phone}
-                  </a>
+                  {person.phone ? (
+                    <a
+                      href={`tel:${person.phone}`}
+                      className="mt-2 block text-sm text-blue-600 underline"
+                    >
+                      {person.phone}
+                    </a>
+                  ) : null}
                 </div>
               ))}
             </div>
-
           </div>
         )}
 
-        {/* VILLES */}
-        {selectedMonth && (
+        {selectedMonth && !selectedCity && (
           <div className="space-y-4">
-
             <button
               onClick={() => setSelectedMonth(null)}
               className="rounded-full bg-white px-4 py-2 font-bold"
@@ -165,9 +267,10 @@ export default function Page() {
             </button>
 
             {cities.map((item, i) => (
-              <div
+              <button
                 key={i}
-                className="overflow-hidden rounded-[24px] bg-white"
+                onClick={() => setSelectedCity(item)}
+                className="block w-full overflow-hidden rounded-[24px] bg-white text-left"
                 style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
               >
                 <div
@@ -177,23 +280,94 @@ export default function Page() {
                       "linear-gradient(90deg, #ec4899 0%, #f472b6 35%, #60a5fa 100%)",
                   }}
                 >
-                  <p className="text-white text-sm font-bold">{item.date}</p>
-                  <h2 className="text-white text-3xl font-black">
-                    {item.city}
-                  </h2>
+                  <p className="text-sm font-bold text-white">{item.date}</p>
+                  <h2 className="text-3xl font-black text-white">{item.city}</h2>
                 </div>
 
                 <div className="px-5 py-5">
-                  <p className="text-xl font-bold text-slate-900">
-                    {item.venue}
-                  </p>
+                  <p className="text-xl font-bold text-slate-900">{item.venue}</p>
                 </div>
-              </div>
+              </button>
             ))}
-
           </div>
         )}
 
+        {selectedCity && (
+          <div className="space-y-4">
+            <button
+              onClick={() => setSelectedCity(null)}
+              className="rounded-full bg-white px-4 py-2 font-bold"
+              style={{ color: "#ec4899" }}
+            >
+              ← Retour aux villes
+            </button>
+
+            <DetailCard
+              title="Date / Ville"
+              value={selectedCity.city}
+              extra={selectedCity.date}
+            />
+
+            <div
+              className="overflow-hidden rounded-[24px] bg-white"
+              style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
+            >
+              <div
+                className="px-5 py-4"
+                style={{
+                  background:
+                    "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
+                }}
+              >
+                <p className="m-0 text-2xl font-black uppercase text-white">Salle</p>
+              </div>
+
+              <div className="px-5 py-5">
+                <p className="m-0 text-2xl font-bold text-slate-900">
+                  {selectedCity.venue}
+                </p>
+                {selectedCity.capacite ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Capacité : {selectedCity.capacite}
+                  </p>
+                ) : null}
+                {mapsLink ? (
+                  <a
+                    href={mapsLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-block rounded-full bg-pink-500 px-4 py-2 text-sm font-bold text-white"
+                  >
+                    Ouvrir dans Maps
+                  </a>
+                ) : null}
+              </div>
+            </div>
+
+            <DetailCard title="Voyage" value={selectedCity.travelType} />
+            <DetailCard
+              title="Horaires de voyage"
+              value={
+                selectedCity.departureTime || selectedCity.arrivalTime
+                  ? `${selectedCity.departureTime || ""} → ${selectedCity.arrivalTime || ""}`
+                  : ""
+              }
+              extra={
+                selectedCity.departureCity || selectedCity.arrivalCity
+                  ? `${selectedCity.departureCity || ""} → ${selectedCity.arrivalCity || ""}`
+                  : ""
+              }
+            />
+            <DetailCard title="Hôtel" value={selectedCity.hotel} />
+            <DetailCard title="Hôtel / Salle" value={selectedCity.hotelSalle} />
+            <DetailCard title="Transport" value={selectedCity.transport} />
+            <DetailCard title="Balances" value={selectedCity.balance} />
+            <DetailCard title="Ouverture des portes" value={selectedCity.doors} />
+            <DetailCard title="Début du show" value={selectedCity.showOrder} />
+            <DetailCard title="Restauration" value={selectedCity.restauration} />
+            <DetailCard title="Production locale" value={selectedCity.productionLocal} />
+          </div>
+        )}
       </div>
     </main>
   );
