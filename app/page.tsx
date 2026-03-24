@@ -2,16 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-const ARTISTS = {
-  paul: "1japAvkYshUBq_D55JOwZCvYfqUGM_OJeJ0kx-GIW-Zk",
-};
-
 type TourItem = {
   date: string;
   city: string;
   venue: string;
-  address?: string;
-  Capacite?: string;
+  capacite?: string;
   travelType?: string;
   departureCity?: string;
   arrivalCity?: string;
@@ -20,18 +15,22 @@ type TourItem = {
   hotel?: string;
   hotelSalle?: string;
   transport?: string;
-  Balance?: string;
-  Doors?: string;
-  ShowOrder?: string;
-  Restauration?: string;
-  ProductionLocal?: string;
-  runnerName?: string;
-  runnerPhone?: string;
-  accueille?: string;
-  accueillePhone?: string;
-  regisseur?: string;
-  regisseurPhone?: string;
+  balance?: string;
+  doors?: string;
+  showOrder?: string;
+  restauration?: string;
+  productionLocal?: string;
 };
+
+type TeamItem = {
+  role: string;
+  name: string;
+  phone: string;
+};
+
+const SHEET_ID = "1japAvkYshUBq_D55JOwZCvYfqUGM_OJeJ0kx-GIW-Zk";
+const DATA_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=DATA`;
+const TEAM_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=TEAM`;
 
 function parseCSVLine(line: string) {
   const result: string[] = [];
@@ -40,135 +39,342 @@ function parseCSVLine(line: string) {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-    if (char === '"') inQuotes = !inQuotes;
-    else if (char === "," && !inQuotes) {
+    const next = line[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
       result.push(current.trim());
       current = "";
-    } else current += char;
+    } else {
+      current += char;
+    }
   }
 
   result.push(current.trim());
-  return result.map((v) => v.replace(/"/g, ""));
+  return result.map((v) => v.replace(/"/g, "").trim());
 }
 
 function parseCSV(csv: string) {
-  const lines = csv.split("\n").filter(Boolean);
+  const lines = csv
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 2) return [];
+
   const headers = parseCSVLine(lines[0]);
 
   return lines.slice(1).map((line) => {
     const values = parseCSVLine(line);
-    const obj: any = {};
-    headers.forEach((h, i) => (obj[h] = values[i] || ""));
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      obj[h] = values[i] || "";
+    });
     return obj;
   });
 }
 
-function Detail({ title, value }: any) {
-  if (!value) return null;
+function getMonth(date: string) {
+  if (!date) return "";
+  const parts = date.split("/");
+  if (parts.length !== 3) return "";
+  const month = parseInt(parts[1], 10);
+
+  if (month === 4) return "AVRIL";
+  if (month === 5) return "MAI";
+  return "";
+}
+
+function DetailCard({
+  title,
+  value,
+  extra,
+}: {
+  title: string;
+  value?: string;
+  extra?: string;
+}) {
+  if (!value && !extra) return null;
 
   return (
-    <div className="rounded-xl bg-white p-3 shadow">
-      <p className="text-xs text-pink-500 font-bold uppercase">{title}</p>
-      <p className="text-sm font-bold">{value}</p>
+    <div
+      className="overflow-hidden rounded-[20px] bg-white"
+      style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
+    >
+      <div
+        className="px-4 py-3"
+        style={{
+          background:
+            "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
+        }}
+      >
+        <p className="m-0 text-lg font-black uppercase text-white">{title}</p>
+      </div>
+
+      <div className="px-4 py-4">
+        {value ? <p className="m-0 text-xl font-bold text-slate-900">{value}</p> : null}
+        {extra ? <p className="mt-2 text-sm text-slate-600">{extra}</p> : null}
+      </div>
     </div>
   );
 }
 
 export default function Page() {
-  const [artist, setArtist] = useState<keyof typeof ARTISTS>("paul");
-  const [data, setData] = useState<TourItem[]>([]);
-  const [selected, setSelected] = useState<any>(null);
-
-  const SHEET_ID = ARTISTS[artist];
+  const [tourData, setTourData] = useState<TourItem[]>([]);
+  const [teamData, setTeamData] = useState<TeamItem[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<TourItem | null>(null);
 
   useEffect(() => {
-    fetch(
-      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=DATA`
-    )
-      .then((r) => r.text())
-      .then((csv) => setData(parseCSV(csv)));
-  }, [artist]);
+    async function load() {
+      const [dataRes, teamRes] = await Promise.all([
+        fetch(DATA_URL, { cache: "no-store" }),
+        fetch(TEAM_URL, { cache: "no-store" }),
+      ]);
+
+      const data = parseCSV(await dataRes.text());
+      const team = parseCSV(await teamRes.text());
+
+      const mappedTour: TourItem[] = data.map((row: Record<string, string>) => ({
+        date: row.date || "",
+        city: row.city || "",
+        venue: row.venue || "",
+        capacite: row.Capacite || row.capacite || "",
+        travelType: row.travelType || "",
+        departureCity: row.departureCity || "",
+        arrivalCity: row.arrivalCity || "",
+        departureTime: row.departureTime || "",
+        arrivalTime: row.arrivalTime || "",
+        hotel: row.hotel || "",
+        hotelSalle: row.hotelSalle || "",
+        transport: row.transport || "",
+        balance: row.Balance || row.balance || "",
+        doors: row.Doors || row.doors || "",
+        showOrder: row.ShowOrder || row.showOrder || "",
+        restauration: row.Restauration || row.restauration || "",
+        productionLocal: row.ProductionLocal || row.productionLocal || "",
+      }));
+
+      const mappedTeam: TeamItem[] = team.map((row: Record<string, string>) => ({
+        role: row.role || "",
+        name: row.name || "",
+        phone: row.phone || "",
+      }));
+
+      setTourData(mappedTour);
+      setTeamData(mappedTeam);
+    }
+
+    load();
+  }, []);
+
+  const topContacts = useMemo(() => {
+    return teamData.filter((p) =>
+      [
+        "Régisseur artiste",
+        "Régisseur général",
+        "Administrateur de tournée",
+      ].includes(p.role)
+    );
+  }, [teamData]);
+
+  const cities = useMemo(() => {
+    if (!selectedMonth) return [];
+    return tourData.filter((item) => getMonth(item.date) === selectedMonth);
+  }, [tourData, selectedMonth]);
+
+  const mapsQuery = selectedCity ? `${selectedCity.venue} ${selectedCity.city}` : "";
+  const mapsLink = mapsQuery
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
+    : "";
 
   return (
-    <main className="p-4 bg-blue-200 min-h-screen">
+    <main
+      className="min-h-screen p-4"
+      style={{
+        background:
+          "linear-gradient(180deg, #1499f5 0%, #45bcff 40%, #8ee2ff 72%, #c7f3ff 100%)",
+      }}
+    >
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-6 pt-3 text-white">
+          <p className="mb-1 text-xl font-black uppercase" style={{ color: "#ff5ca8" }}>
+            PAUL MIRABEL
+          </p>
 
-      {/* HEADER */}
-      <h1 className="text-3xl font-black text-pink-500 mb-4">
-        BACKSTAGE
-      </h1>
-
-      {/* LISTE VILLES */}
-      {!selected &&
-        data.map((item, i) => (
-          <button
-            key={i}
-            onClick={() => setSelected(item)}
-            className="block w-full bg-white p-4 rounded-xl mb-3 shadow"
+          <h1
+            className="m-0 font-black italic"
+            style={{ fontSize: "56px", lineHeight: 0.9 }}
           >
-            <p className="text-xs">{item.date}</p>
-            <p className="text-xl font-bold">{item.city}</p>
-            <p>{item.venue}</p>
-          </button>
-        ))}
-
-      {/* DETAIL */}
-      {selected && (
-        <div className="space-y-3">
-
-          <button onClick={() => setSelected(null)}>
-            ← Retour
-          </button>
-
-          <Detail title="Ville" value={selected.city} />
-          <Detail title="Date" value={selected.date} />
-          <Detail title="Salle" value={selected.venue} />
-          <Detail title="Adresse" value={selected.address} />
-          <Detail title="Capacité" value={selected.Capacite} />
-
-          <Detail title="Voyage" value={selected.travelType} />
-          <Detail
-            title="Horaires"
-            value={`${selected.departureTime} → ${selected.arrivalTime}`}
-          />
-
-          <Detail title="Hôtel" value={selected.hotel} />
-          <Detail title="Transport" value={selected.transport} />
-
-          <Detail title="Balances" value={selected.Balance} />
-          <Detail title="Portes" value={selected.Doors} />
-          <Detail title="Show" value={selected.ShowOrder} />
-
-          <Detail title="Restauration" value={selected.Restauration} />
-          <Detail title="Production" value={selected.ProductionLocal} />
-
-          <Detail
-            title="Runner"
-            value={`${selected.runnerName} ${selected.runnerPhone}`}
-          />
-
-          <Detail
-            title="Accueil"
-            value={`${selected.accueille} ${selected.accueillePhone}`}
-          />
-
-          <Detail
-            title="Régisseur"
-            value={`${selected.regisseur} ${selected.regisseurPhone}`}
-          />
-
-          {selected.address && (
-            <a
-              href={`https://maps.google.com?q=${encodeURIComponent(
-                selected.address
-              )}`}
-              target="_blank"
-              className="block bg-pink-500 text-white text-center p-3 rounded-xl"
-            >
-              Ouvrir Maps
-            </a>
-          )}
+            par amour
+          </h1>
         </div>
-      )}
+
+        {!selectedMonth && !selectedCity && (
+          <div className="space-y-3">
+            {["AVRIL", "MAI"].map((month) => (
+              <button
+                key={month}
+                onClick={() => setSelectedMonth(month)}
+                className="block w-full rounded-[18px] bg-white px-5 py-4 text-left"
+                style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
+              >
+                <span className="text-2xl font-black uppercase text-slate-900">
+                  {month}
+                </span>
+              </button>
+            ))}
+
+            <div className="mt-4 space-y-2">
+              {topContacts.map((person, i) => (
+                <div
+                  key={i}
+                  className="rounded-[18px] bg-white px-4 py-3"
+                  style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
+                >
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-pink-500">
+                    {person.role}
+                  </p>
+
+                  <p className="mt-1 text-lg font-bold text-slate-900">
+                    {person.name}
+                  </p>
+
+                  {person.phone ? (
+                    <a
+                      href={`tel:${person.phone}`}
+                      className="mt-1 block text-sm text-blue-600 underline"
+                    >
+                      {person.phone}
+                    </a>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedMonth && !selectedCity && (
+          <div className="space-y-3">
+            <button
+              onClick={() => setSelectedMonth(null)}
+              className="rounded-full bg-white px-4 py-2 text-sm font-bold"
+              style={{ color: "#ec4899" }}
+            >
+              ← Retour
+            </button>
+
+            {cities.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedCity(item)}
+                className="block w-full overflow-hidden rounded-[18px] bg-white text-left"
+                style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
+              >
+                <div
+                  className="px-4 py-3"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #ec4899 0%, #f472b6 35%, #60a5fa 100%)",
+                  }}
+                >
+                  <p className="text-xs font-bold text-white">{item.date}</p>
+                  <h2 className="text-2xl font-black text-white">{item.city}</h2>
+                </div>
+
+                <div className="px-4 py-3">
+                  <p className="truncate text-base font-bold text-slate-900">
+                    {item.venue}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {selectedCity && (
+          <div className="space-y-3">
+            <button
+              onClick={() => setSelectedCity(null)}
+              className="rounded-full bg-white px-4 py-2 text-sm font-bold"
+              style={{ color: "#ec4899" }}
+            >
+              ← Retour aux villes
+            </button>
+
+            <DetailCard
+              title="Date / Ville"
+              value={selectedCity.city}
+              extra={selectedCity.date}
+            />
+
+            <div
+              className="overflow-hidden rounded-[20px] bg-white"
+              style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.08)" }}
+            >
+              <div
+                className="px-4 py-3"
+                style={{
+                  background:
+                    "linear-gradient(90deg, #1637c9 0%, #1d4ed8 40%, #38bdf8 100%)",
+                }}
+              >
+                <p className="m-0 text-lg font-black uppercase text-white">Salle</p>
+              </div>
+
+              <div className="px-4 py-4">
+                <p className="m-0 text-xl font-bold text-slate-900">
+                  {selectedCity.venue}
+                </p>
+                {selectedCity.capacite ? (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Capacité : {selectedCity.capacite}
+                  </p>
+                ) : null}
+                {mapsLink ? (
+                  <a
+                    href={mapsLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-block rounded-full bg-pink-500 px-4 py-2 text-sm font-bold text-white"
+                  >
+                    Ouvrir dans Maps
+                  </a>
+                ) : null}
+              </div>
+            </div>
+
+            <DetailCard title="Voyage" value={selectedCity.travelType} />
+            <DetailCard
+              title="Horaires de voyage"
+              value={
+                selectedCity.departureTime || selectedCity.arrivalTime
+                  ? `${selectedCity.departureTime || ""} → ${selectedCity.arrivalTime || ""}`
+                  : ""
+              }
+              extra={
+                selectedCity.departureCity || selectedCity.arrivalCity
+                  ? `${selectedCity.departureCity || ""} → ${selectedCity.arrivalCity || ""}`
+                  : ""
+              }
+            />
+            <DetailCard title="Hôtel" value={selectedCity.hotel} />
+            <DetailCard title="Hôtel / Salle" value={selectedCity.hotelSalle} />
+            <DetailCard title="Transport" value={selectedCity.transport} />
+            <DetailCard title="Balances" value={selectedCity.balance} />
+            <DetailCard title="Ouverture des portes" value={selectedCity.doors} />
+            <DetailCard title="Début du show" value={selectedCity.showOrder} />
+            <DetailCard title="Restauration" value={selectedCity.restauration} />
+            <DetailCard title="Production locale" value={selectedCity.productionLocal} />
+          </div>
+        )}
+      </div>
     </main>
   );
 }
