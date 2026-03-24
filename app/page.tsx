@@ -1,10 +1,6 @@
-  return rows.map((row) => {
-    const cols = row.split(",");
-    return {
-      date: cols[0],
-      city: cols[1],
-      venue: cols[2],
-      address: cols[3],
-    };
-  });
-}
+return {
+  date: clean(cols[0]),
+  city: clean(cols[1]),
+  venue: clean(cols[2]),
+  address: clean(cols[3]),
+};
