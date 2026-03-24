@@ -127,6 +127,14 @@ function isFutureOrToday(dateStr: string) {
   return date >= today;
 }
 
+function sortByDate(items: TourItem[]) {
+  return [...items].sort((a, b) => {
+    const da = parseFrenchDate(a.date)?.getTime() ?? 0;
+    const db = parseFrenchDate(b.date)?.getTime() ?? 0;
+    return da - db;
+  });
+}
+
 function InfoCard({
   title,
   value,
@@ -139,7 +147,7 @@ function InfoCard({
   return (
     <div
       className="overflow-hidden rounded-[24px] bg-white"
-      style={{ boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}
+      style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
     >
       <div
         className="px-5 py-4"
@@ -150,6 +158,7 @@ function InfoCard({
       >
         <p className="m-0 text-2xl font-black uppercase text-white">{title}</p>
       </div>
+
       <div className="px-5 py-5">
         <p className="m-0 text-2xl font-bold text-slate-900">{value}</p>
       </div>
@@ -164,47 +173,59 @@ export default function Page() {
 
   useEffect(() => {
     async function loadData() {
-      const res = await fetch(DATA_URL, { cache: "no-store" });
-      const csv = await res.text();
-      const raw = csvToObjects(csv);
+      try {
+        const res = await fetch(DATA_URL, { cache: "no-store" });
+        const csv = await res.text();
+        const raw = csvToObjects(csv);
 
-      const mapped: TourItem[] = raw.map((row) => ({
-        date: row.date || "",
-        city: row.city || "",
-        venue: row.venue || "",
-        address: row.address || "",
-        travelType: row.travelType || "",
-        departureCity: row.departureCity || "",
-        arrivalCity: row.arrivalCity || "",
-        departureTime: row.departureTime || "",
-        arrivalTime: row.arrivalTime || "",
-        transport: row.transport || "",
-        hotelSalle: row.hotelSalle || "",
-        balance: row.Balance || "",
-        doors: row.Doors || "",
-        showOrder: row.ShowOrder || "",
-        restauration: row.Restauration || "",
-        productionLocal: row.ProductionLocal || "",
-      }));
+        const mapped: TourItem[] = raw.map((row) => ({
+          date: row.date || "",
+          city: row.city || "",
+          venue: row.venue || "",
+          address: row.address || "",
+          travelType: row.travelType || "",
+          departureCity: row.departureCity || "",
+          arrivalCity: row.arrivalCity || "",
+          departureTime: row.departureTime || "",
+          arrivalTime: row.arrivalTime || "",
+          transport: row.transport || "",
+          hotelSalle: row.hotelSalle || "",
+          balance: row.Balance || row.balance || "",
+          doors: row.Doors || row.doors || "",
+          showOrder: row.ShowOrder || row.showOrder || "",
+          restauration: row.Restauration || row.restauration || "",
+          productionLocal: row.ProductionLocal || row.productionLocal || "",
+        }));
 
-      const filtered = mapped.filter((item) => {
-        const month = monthNumberFromDate(item.date);
-        return isFutureOrToday(item.date) && (month === 4 || month === 5);
-      });
+        const filtered = sortByDate(
+          mapped.filter((item) => {
+            const month = monthNumberFromDate(item.date);
+            return isFutureOrToday(item.date) && (month === 4 || month === 5);
+          })
+        );
 
-      setTourData(filtered);
+        setTourData(filtered);
+      } catch (error) {
+        console.error("Erreur Google Sheets :", error);
+      }
     }
 
     loadData();
   }, []);
 
   const months = useMemo(() => {
-    return Array.from(new Set(tourData.map((item) => monthLabelFromDate(item.date))));
+    return Array.from(
+      new Set(
+        tourData.map((item) => monthLabelFromDate(item.date)).filter(Boolean)
+      )
+    );
   }, [tourData]);
 
   const cities = useMemo(() => {
     if (!selectedMonth) return [];
-    return tourData.filter((item) => monthLabelFromDate(item.date) === selectedMonth);
+    return tourData.filter(
+      (item) => monthLabelFromDate(item.date) === selectedMonth
+    );
   }, [tourData, selectedMonth]);
 
   return (
@@ -216,17 +237,44 @@ export default function Page() {
       }}
     >
       <div className="mx-auto max-w-3xl">
-        <h1 className="mb-6 text-4xl font-black text-white">Tournée</h1>
+        <div className="mb-8 pt-4 text-white">
+          <p
+            className="mb-2 font-black uppercase"
+            style={{
+              color: "#ff5ca8",
+              fontSize: "clamp(22px, 4vw, 38px)",
+              letterSpacing: "0.04em",
+            }}
+          >
+            PAUL MIRABEL
+          </p>
+
+          <h1
+            className="m-0 font-black italic leading-none"
+            style={{
+              fontSize: "clamp(58px, 11vw, 118px)",
+              color: "#ffffff",
+              textShadow: "0 6px 24px rgba(0,0,0,0.18)",
+            }}
+          >
+            par amour
+          </h1>
+        </div>
 
         {!selectedMonth && !selectedCity && (
           <div className="space-y-4">
+            <h2 className="mb-2 text-2xl font-black text-white">Choisis un mois</h2>
+
             {months.map((month) => (
               <button
                 key={month}
                 onClick={() => setSelectedMonth(month)}
-                className="block w-full rounded-[24px] bg-white px-6 py-6 text-left text-3xl font-black"
+                className="block w-full rounded-[24px] bg-white px-6 py-6 text-left"
+                style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
               >
-                {month}
+                <span className="text-3xl font-black uppercase text-slate-900">
+                  {month}
+                </span>
               </button>
             ))}
           </div>
@@ -236,16 +284,20 @@ export default function Page() {
           <div className="space-y-4">
             <button
               onClick={() => setSelectedMonth(null)}
-              className="rounded-full bg-white px-4 py-2 font-bold text-pink-500"
+              className="rounded-full bg-white px-4 py-2 font-bold"
+              style={{ color: "#ec4899" }}
             >
               ← Retour aux mois
             </button>
 
+            <h2 className="text-2xl font-black text-white">{selectedMonth}</h2>
+
             {cities.map((item, i) => (
               <button
-                key={i}
+                key={`${item.city}-${item.date}-${i}`}
                 onClick={() => setSelectedCity(item)}
                 className="block w-full overflow-hidden rounded-[24px] bg-white text-left"
+                style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
               >
                 <div
                   className="px-5 py-4"
@@ -263,7 +315,9 @@ export default function Page() {
                 </div>
 
                 <div className="px-5 py-5">
-                  <p className="m-0 text-xl font-bold text-slate-900">{item.venue}</p>
+                  <p className="m-0 text-xl font-bold text-slate-900">
+                    {item.venue}
+                  </p>
                   <p className="mt-1 text-sm text-slate-600">{item.address}</p>
                 </div>
               </button>
@@ -275,14 +329,15 @@ export default function Page() {
           <div className="space-y-4">
             <button
               onClick={() => setSelectedCity(null)}
-              className="rounded-full bg-white px-4 py-2 font-bold text-pink-500"
+              className="rounded-full bg-white px-4 py-2 font-bold"
+              style={{ color: "#ec4899" }}
             >
               ← Retour aux villes
             </button>
 
             <div
               className="overflow-hidden rounded-[24px] bg-white"
-              style={{ boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}
+              style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.08)" }}
             >
               <div
                 className="px-5 py-5"
