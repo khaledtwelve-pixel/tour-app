@@ -17,6 +17,12 @@ async function getData() {
       city: clean(cols[1]),
       venue: clean(cols[2]),
       address: clean(cols[3]),
+      travelType: clean(cols[4]),
+      departureCity: clean(cols[5]),
+      arrivalCity: clean(cols[6]),
+      departureTime: clean(cols[7]),
+      arrivalTime: clean(cols[8]),
+      transport: clean(cols[9]),
     };
   });
 }
@@ -29,11 +35,23 @@ export default async function Page() {
       <h1 className="text-3xl font-bold mb-6">Tournée</h1>
 
       {data.map((item, i) => (
-        <div key={i} className="mb-4 p-4 border rounded">
-          <p>{item.date}</p>
-          <h2 className="text-xl">{item.city}</h2>
-          <p>{item.venue}</p>
-          <p>{item.address}</p>
+        <div key={i} className="mb-6 p-6 border rounded-xl shadow">
+          <h2 className="text-2xl font-bold">{item.city}</h2>
+          <p className="text-sm text-gray-500 mb-2">{item.date}</p>
+
+          <p className="font-semibold">{item.venue}</p>
+          <p className="mb-4">{item.address}</p>
+
+          <div className="text-sm text-gray-600">
+            <p>🚐 Voyage: {item.travelType}</p>
+            <p>
+              {item.departureCity} → {item.arrivalCity}
+            </p>
+            <p>
+              {item.departureTime} → {item.arrivalTime}
+            </p>
+            <p>Transport: {item.transport}</p>
+          </div>
         </div>
       ))}
     </main>
