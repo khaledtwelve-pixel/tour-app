@@ -1,5 +1,22 @@
 
-async function getData() {
+"use client";
+
+import { useEffect, useState } from "react";
+
+type TourItem = {
+  date: string;
+  city: string;
+  venue: string;
+  address: string;
+  travelType: string;
+  departureCity: string;
+  arrivalCity: string;
+  departureTime: string;
+  arrivalTime: string;
+  transport: string;
+};
+
+async function fetchData(): Promise<TourItem[]> {
   const res = await fetch(
     "https://docs.google.com/spreadsheets/d/1Gw5lRqEonLr_8OAYSC3QLtNSMhyDF2X3mW0g_ZDXl64/export?format=csv&gid=0",
     { cache: "no-store" }
@@ -12,7 +29,6 @@ async function getData() {
 
   return rows.map((row) => {
     const cols = row.split(",");
-
     return {
       date: clean(cols[0]),
       city: clean(cols[1]),
@@ -28,122 +44,192 @@ async function getData() {
   });
 }
 
-export default async function Page() {
-  const data = await getData();
+export default function Page() {
+  const [data, setData] = useState<TourItem[]>([]);
+  const [selected, setSelected] = useState<TourItem | null>(null);
+
+  useEffect(() => {
+    fetchData().then(setData);
+  }, []);
 
   return (
     <main
-      className="min-h-screen p-6"
+      className="min-h-screen"
       style={{
         background:
-          "linear-gradient(180deg, #55c7ff 0%, #8ee3ff 45%, #b7f0ff 100%)",
+          "linear-gradient(180deg, #1296f3 0%, #41b8ff 38%, #86d8ff 68%, #b8ecff 100%)",
       }}
     >
-      <div className="mx-auto max-w-2xl">
-        <div
-          className="mb-8 rounded-[28px] px-8 py-10 text-white shadow-2xl"
-          style={{
-            background:
-              "linear-gradient(180deg, #1d4ed8 0%, #2563eb 35%, #38bdf8 100%)",
-          }}
-        >
+      <div className="mx-auto max-w-3xl px-5 py-8">
+        <section className="mb-8 pt-4 text-white">
           <p
-            className="mb-2 text-sm tracking-wide"
-            style={{ color: "rgba(255,255,255,0.85)" }}
+            className="mb-2 font-black uppercase"
+            style={{
+              color: "#ff5ca8",
+              fontSize: "clamp(22px, 4vw, 38px)",
+              letterSpacing: "0.04em",
+            }}
           >
             PAUL MIRABEL
           </p>
 
           <h1
-            className="m-0 leading-none font-black italic"
+            className="m-0 font-black italic leading-none"
             style={{
-              fontSize: "clamp(48px, 9vw, 90px)",
+              fontSize: "clamp(58px, 11vw, 118px)",
               color: "#ffffff",
-              textShadow: "0 4px 18px rgba(0,0,0,0.15)",
+              textShadow: "0 6px 24px rgba(0,0,0,0.18)",
             }}
           >
             par amour
           </h1>
 
-          <div className="mt-6 inline-block rounded-full bg-white/90 px-5 py-2">
+          <div className="mt-8 text-center">
             <p
-              className="m-0 text-sm font-extrabold tracking-wide"
-              style={{ color: "#ec4899" }}
+              className="mb-3 font-extrabold uppercase text-white"
+              style={{
+                fontSize: "clamp(22px, 4vw, 40px)",
+                letterSpacing: "0.03em",
+              }}
             >
-              TOURNÉE / PLANNING
+              LE PLANNING DE TOURNÉE
             </p>
-          </div>
-        </div>
 
-        {data.map((item, i) => (
-          <div
-            key={i}
-            className="mb-6 overflow-hidden rounded-[26px] bg-white shadow-xl"
+            <div
+              className="inline-block rounded-md px-5 py-3"
+              style={{
+                background: "#ff5ca8",
+                boxShadow: "0 8px 24px rgba(236,72,153,0.35)",
+              }}
+            >
+              <span
+                className="font-black uppercase text-white"
+                style={{
+                  fontSize: "clamp(20px, 3.8vw, 34px)",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                MARS 2026
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {!selected ? (
+          <section className="space-y-5">
+            {data.map((item, i) => (
+              <button
+                key={i}
+                onClick={() => setSelected(item)}
+                className="block w-full overflow-hidden rounded-[28px] bg-white text-left"
+                style={{
+                  boxShadow: "0 18px 50px rgba(0, 83, 135, 0.18)",
+                }}
+              >
+                <div
+                  className="px-6 py-5"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #1d4ed8 0%, #2563eb 45%, #38bdf8 100%)",
+                  }}
+                >
+                  <p
+                    className="m-0 text-sm font-extrabold uppercase"
+                    style={{
+                      color: "rgba(255,255,255,0.85)",
+                      letterSpacing: "0.18em",
+                    }}
+                  >
+                    {item.date}
+                  </p>
+
+                  <h2 className="mt-2 text-4xl font-black uppercase text-white">
+                    {item.city}
+                  </h2>
+                </div>
+
+                <div className="p-6">
+                  <p className="text-2xl font-bold text-slate-900">{item.venue}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.address}</p>
+                </div>
+              </button>
+            ))}
+          </section>
+        ) : (
+          <section
+            className="overflow-hidden rounded-[28px] bg-white"
             style={{
-              border: "3px solid rgba(255,255,255,0.55)",
-              boxShadow: "0 18px 40px rgba(14, 116, 144, 0.16)",
+              boxShadow: "0 18px 50px rgba(0, 83, 135, 0.18)",
             }}
           >
             <div
-              className="px-6 py-5 text-white"
+              className="px-6 py-5"
               style={{
                 background:
                   "linear-gradient(90deg, #ec4899 0%, #f472b6 35%, #60a5fa 100%)",
               }}
             >
-              <p
-                className="m-0 text-xs font-bold tracking-[0.2em]"
-                style={{ color: "rgba(255,255,255,0.9)" }}
+              <button
+                onClick={() => setSelected(null)}
+                className="mb-4 rounded-full bg-white px-4 py-2 text-sm font-bold text-pink-500"
               >
-                {item.date}
+                ← Retour
+              </button>
+
+              <p
+                className="m-0 text-sm font-extrabold uppercase"
+                style={{
+                  color: "rgba(255,255,255,0.9)",
+                  letterSpacing: "0.18em",
+                }}
+              >
+                {selected.date}
               </p>
-              <h2 className="mt-2 text-3xl font-black uppercase">{item.city}</h2>
+
+              <h2 className="mt-2 text-4xl font-black uppercase text-white">
+                {selected.city}
+              </h2>
             </div>
 
-            <div className="px-6 py-6">
-              <div
-                className="mb-5 rounded-2xl px-5 py-4"
-                style={{ background: "#fdf2f8" }}
-              >
-                <p className="m-0 text-xs font-extrabold uppercase tracking-[0.2em] text-pink-500">
+            <div className="space-y-4 p-6">
+              <div className="rounded-3xl p-5" style={{ background: "#fff1f7" }}>
+                <p className="m-0 text-xs font-extrabold uppercase tracking-[0.24em] text-pink-500">
                   Salle
                 </p>
-                <p className="mt-2 text-xl font-bold text-slate-900">{item.venue}</p>
-                <p className="mt-1 text-sm text-slate-600">{item.address}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {selected.venue}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">{selected.address}</p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div
-                  className="rounded-2xl px-5 py-4"
-                  style={{ background: "#eff6ff" }}
-                >
-                  <p className="m-0 text-xs font-extrabold uppercase tracking-[0.2em] text-blue-600">
+                <div className="rounded-3xl p-5" style={{ background: "#eef7ff" }}>
+                  <p className="m-0 text-xs font-extrabold uppercase tracking-[0.24em] text-blue-600">
                     Voyage
                   </p>
-                  <p className="mt-2 font-semibold text-slate-900">
-                    {item.departureCity} → {item.arrivalCity}
+                  <p className="mt-2 text-lg font-bold text-slate-900">
+                    {selected.departureCity} → {selected.arrivalCity}
                   </p>
                   <p className="mt-1 text-sm text-slate-600">
-                    {item.departureTime} → {item.arrivalTime}
+                    {selected.departureTime} → {selected.arrivalTime}
                   </p>
                 </div>
 
-                <div
-                  className="rounded-2xl px-5 py-4"
-                  style={{ background: "#f0fdf4" }}
-                >
-                  <p className="m-0 text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-600">
+                <div className="rounded-3xl p-5" style={{ background: "#f5faff" }}>
+                  <p className="m-0 text-xs font-extrabold uppercase tracking-[0.24em] text-sky-600">
                     Transport
                   </p>
-                  <p className="mt-2 font-semibold text-slate-900">
-                    {item.transport || item.travelType}
+                  <p className="mt-2 text-lg font-bold text-slate-900">
+                    {selected.transport || "—"}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">{item.travelType}</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {selected.travelType || "—"}
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          </section>
+        )}
       </div>
     </main>
   );
