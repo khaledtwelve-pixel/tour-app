@@ -143,3 +143,7 @@ export default function Page() {
     </main>
   );
 }
+
+git add .
+git commit -m "move team under months clean"
+git push
